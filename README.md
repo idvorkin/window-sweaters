@@ -55,7 +55,7 @@ See every sweater and its close-up stitches in the [catalogue](docs/COLLECTION.m
 
 The 37 custom sweaters keep their hand-picked colours and patterns. Other apps borrow colours from their own icons, softened into yarn, and get a two-colour zigzag, picnic or twinkle sweater in **By App** mode. The pattern stays the same for each app. If an icon has no usable colour, the app keeps a stable colour chosen from its name.
 
-Icons are sampled locally in the background when needed. While the colour is being prepared, the border uses its usual fallback. **Zigzag** uses icon colours for every app, the 37 custom ones included, with a cream zigzag, or a deeper shade of the app’s colour on pale apps. Colours you set in `apps.conf` always win. Other shared patterns keep their own contrast yarns, with each app’s own base colour.
+Icons are sampled locally in the background when needed. While the colour is being prepared, the border uses its usual fallback. **Zigzag** uses icon colours for every app, the 37 custom ones included, with a cream zigzag, or a deeper shade of the app’s colour on pale apps. Colours you set in `apps.conf` always win. **Polka Dots** keeps each app’s own colour, hand-picked ones included, with cream dots, or a deeper shade of the app’s colour on pale apps. Other shared patterns keep their own contrast yarns, with each app’s own base colour.
 
 ## A little work in progress
 

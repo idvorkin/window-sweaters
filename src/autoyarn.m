@@ -57,7 +57,7 @@ static void retry_deferred(void) {
   if (!g_deferred) { g_deferred = owners; g_deferred_capacity = count; }   // reuse storage
   else free(owners);
 }
-enum { CHART_NONE, CHART_BY_APP, CHART_ZIGZAG };
+enum { CHART_NONE, CHART_BY_APP, CHART_ZIGZAG, CHART_POLKA };
 static const uint32_t CREAM = KNIT_CREAM;                    // the collection's cream
 
 static void rgb2hsl(uint32_t v, double* h, double* s, double* l) {
@@ -331,5 +331,17 @@ bool knit_zigzag_yarn(const char* app, pid_t pid, uint32_t* yarn, int* chart) {
   if (!entry) entry = auto_entry(app, pid);       // a personal colour still needs a chart slot
   // No room for this app's own zigzag: plain knitting beats cream on cream.
   *chart = entry ? entry_chart(entry, "zigzag", CHART_ZIGZAG, contrast) : -1;
+  return true;
+}
+
+bool knit_polka_yarn(const char* app, pid_t pid, uint32_t yarn, int* chart) {
+  if (!chart || *chart < 0 || *chart >= g_chart_count) return false;
+  // A polka.png the user drew themselves is shown exactly as drawn.
+  if (*chart != knit_chart_index("polka") || g_charts[*chart].custom) return false;
+  uint32_t contrast = zigzag_yarn(yarn);
+  if (contrast == CREAM) return false;              // cream dots already show
+  struct auto_yarn* entry = auto_entry(app, pid);
+  // No room for this app's own dots: plain knitting beats cream on cream.
+  *chart = entry ? entry_chart(entry, "polka", CHART_POLKA, contrast) : -1;
   return true;
 }

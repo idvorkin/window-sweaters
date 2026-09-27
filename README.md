@@ -30,6 +30,8 @@ Click the yarn icon in your menu bar to change the style, pattern, border width,
 
 To leave an app bare, open **Apps** and untick it. Its windows lose their sweater straight away, everything else stays as it is, and it stays off until you tick it again, even after a restart. Only want sweaters on a few apps? Choose **Turn Off for All Apps**, then tick the ones you like. Apps you open later start off too.
 
+Want just one sweater at a time? Tick **Focused Window Only** and only the window you're using wears one; the rest stay bare until you click into them. In a startup script it's `focused_only=on`.
+
 **By App** gives each app its own sweater. **Zigzag** gives them all a softer, matching cream zigzag in colours taken from their icons. Try both and see what you like.
 
 If macOS asks for Accessibility access, enable Window Sweaters in **System Settings → Privacy & Security → Accessibility** so it can follow which window is focused.
@@ -53,7 +55,7 @@ See every sweater and its close-up stitches in the [catalogue](docs/COLLECTION.m
 
 The 37 custom sweaters keep their hand-picked colours and patterns. Other apps borrow colours from their own icons, softened into yarn, and get a two-colour zigzag, picnic or twinkle sweater in **By App** mode. The pattern stays the same for each app. If an icon has no usable colour, the app keeps a stable colour chosen from its name.
 
-Icons are sampled locally in the background when needed. While the colour is being prepared, the border uses its usual fallback. **Zigzag** uses icon colours for every app, the 37 custom ones included, with a cream zigzag, or a deeper shade of the app’s colour on pale apps. Colours you set in `apps.conf` always win. Other shared patterns keep their own contrast yarns, with each app’s own base colour.
+Icons are sampled locally in the background when needed. While the colour is being prepared, the border uses its usual fallback. **Zigzag** uses icon colours for every app, the 37 custom ones included, with a cream zigzag, or a deeper shade of the app’s colour on pale apps. Colours you set in `apps.conf` always win. **Polka Dots** keeps each app’s own colour, hand-picked ones included, with cream dots, or a deeper shade of the app’s colour on pale apps. Other shared patterns keep their own contrast yarns, with each app’s own base colour.
 
 ## A little work in progress
 

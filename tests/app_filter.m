@@ -124,6 +124,7 @@ struct settings g_settings;
 pid_t g_pid = 1;
 int g_knit_trace;
 float g_knit_dim;
+bool g_knit_focused_only;
 CFArrayRef (*JBSLSWindowIteratorGetCornerRadii)(CFTypeRef);
 static int created, destroyed;
 
@@ -239,8 +240,26 @@ int main(void) {
     knit_apps_set_all(true);
     windows_apply_app_filter(&g_windows);
     assert(!border_of(12) && border_count() == 4);
+
+    // Focused Window Only: a focus change must repaint both the window that
+    // loses its sweater and the one that gains it, and nothing else. Without
+    // it, knit sweaters look the same either way and are not repainted.
+    g_settings.border_style = BORDER_STYLE_KNIT;
+    for (uint32_t wid = 0; wid < 40; wid++) if (border_of(wid)) border_of(wid)->needs_redraw = false;
+    front_wid = 21;
+    windows_determine_and_focus_active_window(&g_windows);
+    assert(border_of(21)->focused && !border_of(11)->focused);
+    assert(!border_of(21)->needs_redraw && !border_of(11)->needs_redraw);
+    g_knit_focused_only = true;
+    front_wid = 11;
+    windows_determine_and_focus_active_window(&g_windows);
+    assert(border_of(11)->focused && !border_of(21)->focused);
+    assert(border_of(11)->needs_redraw && border_of(21)->needs_redraw);
+    assert(!border_of(13)->needs_redraw && !border_of(31)->needs_redraw);
+    g_knit_focused_only = false;
   }
   puts("PASS: live per-app switching through the production window code: targeted removal and "
-       "restoration, focus restored, all off/on, script filters respected, closed windows stay closed");
+       "restoration, focus restored, all off/on, script filters respected, closed windows stay closed, "
+       "focused-only repaints on focus change");
   return 0;
 }

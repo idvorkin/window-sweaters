@@ -317,6 +317,24 @@ int main(void) { @autoreleasepool {
   assert(knit_pattern_select("zigzag"));
   my=0; mc=knit_chart_index("zigzag"); knit_zigzag_yarn("Switcher",903,&my,&mc);
   assert(mc>=0 && mc!=knit_chart_index("zigzag")); check_chart(mc,zigzag_yarn(my));
+  // Shared Polka Dots: every app keeps its own yarn. A dark one wears the
+  // shared cream dots; a pale one gets dots in a deeper shade of its yarn,
+  // still round. Any other chart is untouched.
+  int polka=knit_chart_index("polka");
+  assert(polka>=0 && g_charts[polka].round_dots);
+  int dots=polka;
+  assert(!knit_polka_yarn("Slack",930,0xff542a52,&dots) && dots==polka);
+  uint32_t chrome=knit_app_rule("Google Chrome")->color; dots=polka;
+  assert(knit_polka_yarn("Google Chrome",931,chrome,&dots));
+  assert(dots!=polka && g_charts[dots].round_dots); check_chart(dots,zigzag_yarn(chrome));
+  int chrome_dots=dots; charts_now=g_chart_count; dots=polka;
+  assert(knit_polka_yarn("Google Chrome",931,chrome,&dots));   // a cache hit: nothing rebuilt
+  assert(dots==chrome_dots && g_chart_count==charts_now);
+  dots=zig;
+  assert(!knit_polka_yarn("Google Chrome",931,chrome,&dots) && dots==zig);
+  dots=-1; assert(!knit_polka_yarn("Google Chrome",931,chrome,&dots) && dots==-1);
+  drain();
+  puts("PASS: shared Polka Dots: own yarn for every app, cream dots or deeper-shade dots on pale apps, cached");
   puts("PASS: shared Zigzag: icon colours for every app, cream or deeper-shade zigzag, fallbacks, one chart per app across modes and reloads");
 
   // A colour the user wrote in apps.conf wins over the icon, in Zigzag too;

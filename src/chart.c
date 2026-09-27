@@ -226,6 +226,10 @@ static const struct collection_chart k_collection[] = {
       "a....aa....a", "aa........aa", ".aa......aa.",
       "..aa....aa..", "...aa..aa...", "....aaaa...." },
     { 0xfff6f0deu } },   // cream; a pale app gets a deeper shade (autoyarn.m)
+  { "polka", {           // the Messages dots, all cream, in any app's colour
+      "................", "..aa......aa....", "..aa......aa....",
+      "................", "......aa......aa", "......aa......aa" },
+    { 0xfff8f7e8u } },
 };
 
 // Solid patches finish patterns that otherwise collide at the mitre.
@@ -270,7 +274,8 @@ static void load_collection(void) {
       for (int cell = 0; cell < w * h; cell++)
         if (pixels[cell] == chart->cuff_color) pixels[cell] = 0;
     }
-    chart->round_dots = strcmp(spec->name, "atelier-messages") == 0;
+    chart->round_dots = strcmp(spec->name, "atelier-messages") == 0
+                      || strcmp(spec->name, "polka") == 0;
     chart->fitted_repeat = strcmp(spec->name, "atelier-finder") == 0
                          || strcmp(spec->name, "atelier-terminal") == 0
                          || strcmp(spec->name, "atelier-grok") == 0

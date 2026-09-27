@@ -41,6 +41,7 @@ struct settings g_settings = {.border_width = 10, .border_style = BORDER_STYLE_K
 struct knit_gauge g_knit;
 bool g_knit_on = false;
 float g_knit_dim;
+bool g_knit_focused_only;
 int g_chart_active;
 mach_port_t g_server_port;
 static int draws;
@@ -253,6 +254,27 @@ int main(void) {
   border.needs_redraw = true;
   border_update_geometry(&border);
   assert(flushes == old_flushes + 1 && !border.needs_redraw);
+
+  // Focused Window Only: an unfocused border is cleared, never knitted; the
+  // focused one still is. Either way the cleared surface is flushed.
+  g_knit_on = true;
+  g_knit_focused_only = true;
+  int old_draws = draws;
+  old_flushes = flushes;
+  border.focused = false;
+  border.needs_redraw = true;
+  border_update_geometry(&border);
+  assert(draws == old_draws && flushes == old_flushes + 1 && !border.needs_redraw);
+  border.focused = true;
+  border.needs_redraw = true;
+  border_update_geometry(&border);
+  assert(draws == old_draws + 1 && flushes == old_flushes + 2);
+  g_knit_focused_only = false;
+  border.focused = false;
+  border.needs_redraw = true;
+  border_update_geometry(&border);
+  assert(draws == old_draws + 2);
+  g_knit_on = false;
 
   // Hiding invalidates the shortcut, so unchanged bounds can be restored.
   border_hide(&border);

@@ -146,7 +146,7 @@ static const struct { const char* name; const char* title; } knit_menu_patterns[
   { "zigzag", "Zigzag" },
   { "picnic", "Picnic Checks" }, { "ribbon", "Ribbon Stripes" },
   { "posy", "Little Bows" }, { "twinkle", "Tiny Stars" },
-  { "candy-stripe", "Candy Stripes" }
+  { "candy-stripe", "Candy Stripes" }, { "polka", "Polka Dots" }
 };
 
 static bool knit_menu_featured_chart(const char* name) {
@@ -168,6 +168,7 @@ static bool knit_menu_path_available(const char* path, bool directory) {
 static void knit_save_prefs(void) {
   NSUserDefaults* d = NSUserDefaults.standardUserDefaults;
   [d setBool:g_knit_on forKey:@"on"];
+  [d setBool:g_knit_focused_only forKey:@"focusedOnly"];
   [d setInteger:g_knit_stitch forKey:@"yarn"];
   [d setInteger:g_knit_basket forKey:@"basket"];
   [d setFloat:knit_current_width() forKey:@"width"];
@@ -188,7 +189,7 @@ static void knit_load_prefs(void) {
   NSUserDefaults* d = NSUserDefaults.standardUserDefaults;
   // Older versions saved a global chart even while app profiles overrode it.
   // A missing mode therefore migrates to By App, preserving those sweaters.
-  [d registerDefaults:@{ @"on": @YES, @"yarn": @0, @"basket": @3, @"width": @12.0f, @"gauge": @6.0f, @"chart": @"none", @"patternByApp": @YES, @"anchor": @0, @"appsOnByDefault": @YES, @"appExceptions": @[] }];
+  [d registerDefaults:@{ @"on": @YES, @"focusedOnly": @NO, @"yarn": @0, @"basket": @3, @"width": @12.0f, @"gauge": @6.0f, @"chart": @"none", @"patternByApp": @YES, @"anchor": @0, @"appsOnByDefault": @YES, @"appExceptions": @[] }];
   char buf[128];
 
   NSInteger y = [d integerForKey:@"yarn"];
@@ -224,6 +225,7 @@ static void knit_load_prefs(void) {
              ? "anchor=centre" : "anchor=corner");
 
   knit_apply([d boolForKey:@"on"] ? "knit=on" : "knit=off");
+  knit_apply([d boolForKey:@"focusedOnly"] ? "focused_only=on" : "focused_only=off");
 
   // Restored before any window is discovered, so a switched-off app never
   // flashes a sweater at launch. Anything malformed is skipped, not trusted.
@@ -302,6 +304,11 @@ static void knit_load_prefs(void) {
   knit_apply(g_knit_on ? "knit=off" : "knit=on");
   knit_save_prefs();
   [self updateStatus];
+}
+
+- (void)toggleFocusedOnly:(NSMenuItem*)sender {
+  knit_apply(g_knit_focused_only ? "focused_only=off" : "focused_only=on");
+  knit_save_prefs();
 }
 
 - (void)toggleApp:(NSMenuItem*)sender {
@@ -510,6 +517,10 @@ static void knit_load_prefs(void) {
   [menu itemAtIndex:0].state = g_knit_on ? NSControlStateValueOn : NSControlStateValueOff;
 
   [self buildApps:[self submenu:menu title:@"Apps"]];
+  [self addAction:menu title:@"Focused Window Only" selector:@selector(toggleFocusedOnly:)];
+  NSMenuItem* focusedOnly = [menu itemAtIndex:menu.numberOfItems - 1];
+  focusedOnly.state = g_knit_focused_only ? NSControlStateValueOn : NSControlStateValueOff;
+  focusedOnly.toolTip = @"Only the window you're using wears a sweater.";
 
   NSMenu* pattern = [self submenu:menu title:@"Pattern"];
   NSMenuItem* byApp = [self add:pattern title:@"By App" arg:@"chart=by-app"

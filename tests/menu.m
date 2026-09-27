@@ -72,7 +72,7 @@ static bool saved_on_by_default(void) {
 
 struct knit_gauge g_knit = {.rows = 6};
 int g_knit_stitch, g_knit_basket, g_knit_anchor;
-bool g_knit_on = true, g_knit_pattern_by_app = true;
+bool g_knit_on = true, g_knit_pattern_by_app = true, g_knit_focused_only;
 const char* g_knit_stitch_names[] = {"stockinette", "rib", "garter"};
 static const uint32_t basket[] = {0xff123456, 0xffabcdef};
 const struct knit_basket g_knit_baskets[] = {
@@ -108,6 +108,7 @@ void knit_apply(const char* argument) {
   } else if (sscanf(argument, "gauge=%f", &g_knit.rows) == 1) {
   } else if (sscanf(argument, "width=%f", &current_width) == 1) {
   } else if (!strncmp(argument, "knit=", 5)) g_knit_on = !strcmp(argument + 5, "on");
+  else if (!strncmp(argument, "focused_only=", 13)) g_knit_focused_only = !strcmp(argument + 13, "on");
 }
 
 static int add_chart(const char* name, int height) {
@@ -281,12 +282,28 @@ int main(void) {
     NSMenu* menu = [[NSMenu alloc] initWithTitle:@"Test"];
     menu.autoenablesItems = NO;
     [controller rebuild:menu];
-    NSArray* expected = @[@"Show Sweater Borders", @"Apps", @"Pattern", @"Border Width", @"Stitch Size",
+    NSArray* expected = @[@"Show Sweater Borders", @"Apps", @"Focused Window Only", @"Pattern", @"Border Width", @"Stitch Size",
                          @"", @"Quit Window Sweaters"];
     assert(menu.numberOfItems == expected.count);
     for (NSInteger i = 0; i < menu.numberOfItems; i++)
       assert([[menu itemAtIndex:i].title isEqualToString:expected[i]]);
     check_actions(menu);
+
+    // Focused Window Only: off by default, one click each way, saved, restored.
+    KnitTestDefaults* defaults = [KnitTestDefaults standardUserDefaults];
+    assert(!g_knit_focused_only && [menu itemWithTitle:@"Focused Window Only"].state == NSControlStateValueOff);
+    [controller toggleFocusedOnly:[menu itemWithTitle:@"Focused Window Only"]];
+    assert(g_knit_focused_only && [defaults boolForKey:@"focusedOnly"]);
+    [controller rebuild:menu];
+    assert([menu itemWithTitle:@"Focused Window Only"].state == NSControlStateValueOn);
+    g_knit_focused_only = false;
+    knit_load_prefs();
+    assert(g_knit_focused_only);
+    [controller toggleFocusedOnly:[menu itemWithTitle:@"Focused Window Only"]];
+    assert(!g_knit_focused_only && ![defaults boolForKey:@"focusedOnly"]);
+    [controller rebuild:menu];
+    assert([menu itemWithTitle:@"Focused Window Only"].state == NSControlStateValueOff);
+
     NSMenu* patterns = submenu(menu, @"Pattern");
     assert(checked_count(patterns) == 1);
     assert(![patterns itemWithTitle:@"Stitch Style"] && ![patterns itemWithTitle:@"Awning"]);
@@ -387,6 +404,7 @@ int main(void) {
     test_listing();
     test_apps(controller, menu);
     puts("PASS: per-app switches: listing rules, sorted, truthful, persisted, reversible, all on and all off");
+    puts("PASS: focused-window-only switch: off by default, toggles, persisted, restored");
     puts("PASS: native menu structure, truthful state, working selections, chart filtering, gauge limits, cached swatches");
   }
   return 0;

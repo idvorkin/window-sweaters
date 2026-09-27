@@ -17,3 +17,9 @@ bool knit_zigzag_active(void);
 // a cream zigzag, or a deeper shade of that yarn when the yarn is pale.
 // *yarn comes in as the app's usual colour; *chart as the shared zigzag.
 bool knit_zigzag_yarn(const char* app, pid_t pid, uint32_t* yarn, int* chart);
+
+// The shared Polka Dots pattern keeps every app's own yarn. Cream dots vanish
+// on a pale yarn, so there they are knitted in a deeper shade of it instead.
+// *chart comes in as the chart about to be drawn; only the built-in polka
+// chart is changed. Returns true when *chart was replaced.
+bool knit_polka_yarn(const char* app, pid_t pid, uint32_t yarn, int* chart);

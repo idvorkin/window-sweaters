@@ -13,6 +13,10 @@ __attribute__((weak))
 bool knit_zigzag_yarn(const char* app, pid_t pid, uint32_t* yarn, int* chart) {
   (void)app; (void)pid; (void)yarn; (void)chart; return false;
 }
+__attribute__((weak))
+bool knit_polka_yarn(const char* app, pid_t pid, uint32_t yarn, int* chart) {
+  (void)app; (void)pid; (void)yarn; (void)chart; return false;
+}
 #include "misc/apps.h"
 #include "misc/chart.h"
 #include <math.h>
@@ -106,7 +110,7 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
 
   if (settings->border_style == BORDER_STYLE_KNIT) {
     CGContextClearRect(border->context, frame);
-    if (!g_knit_on) {
+    if (!g_knit_on || (g_knit_focused_only && !border->focused)) {
       CGContextFlush(border->context);
       CGContextRestoreGState(border->context);
       SLSFlushWindowContentRegion(border->cid, border->wid, NULL);
@@ -132,6 +136,7 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
         if (auto_chart >= 0) chart = auto_chart;
       }
     }
+    knit_polka_yarn(border->app, border->owner_pid, yarn, &chart);
 
     knit_draw(border->context,
               border->drawing_bounds,

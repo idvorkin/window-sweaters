@@ -194,6 +194,14 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       g_knit_on = false;
       update_mask |= BORDER_UPDATE_MASK_ALL;
     }
+    else if (strcmp(arguments[i], "focused_only=on") == 0) {
+      g_knit_focused_only = true;
+      update_mask |= BORDER_UPDATE_MASK_ALL;
+    }
+    else if (strcmp(arguments[i], "focused_only=off") == 0) {
+      g_knit_focused_only = false;
+      update_mask |= BORDER_UPDATE_MASK_ALL;
+    }
     else if (strncmp(arguments[i], "yarn=", 5) == 0) {
       for (int k = 0; k < KNIT_STITCH_COUNT; k++) {
         if (strcmp(arguments[i] + 5, g_knit_stitch_names[k]) == 0) g_knit_stitch = k;

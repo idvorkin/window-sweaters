@@ -90,5 +90,8 @@ void knit_draw(CGContextRef ctx, CGRect win, float radius, float band,
 /// shows through it. 0 makes every window identical.
 extern float g_knit_dim;
 
+/// Only the focused window wears its sweater; the rest are left bare.
+extern bool g_knit_focused_only;
+
 /// Discard every cached tile. Call after changing the gauge, stitch or basket.
 void knit_flush_cache(void);

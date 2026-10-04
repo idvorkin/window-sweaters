@@ -36,6 +36,10 @@ A window that fills the screen has no room around it, so its sweater is normally
 
 Fancy a visitor? Open **Raccoon** and tick **Visit Every Few Minutes**: every two to five minutes a little raccoon runs a lap around the window you're using, and, depending on the appetite you pick, eats the sweater as it goes. By default it's knitted back when the raccoon leaves. **Summon Now** calls it straight away and **Shoo Away** (`raccoon=away`) sends it off mid-lap. If a summon shows nothing, `raccoon=why` writes what the app believes about focus to the system log, and every visit logs why it ended (`log show --last 1m --predicate 'process == "WindowSweaters"'`). In a startup script it's `raccoon=on`, `raccoon=now` and `raccoon_eats=off|lap|nibble|stay|sometimes`. Tick **Follow Me Between Windows** (`raccoon_follow=on`) and it hops to whichever window you switch to mid-lap, instead of leaving.
 
+| Nibble (`raccoon_eats=nibble`) | Lap (`raccoon_eats=lap`) |
+| --- | --- |
+| ![A raccoon runs along a window's knitted border, stops, digs down through it scattering crumbs, and pops out](docs/raccoon-nibble.gif) | ![A raccoon runs a lap around a window, eating the knitted border as it goes](docs/raccoon-lap.gif) |
+
 **By App** gives each app its own sweater. **Zigzag** gives them all a softer, matching cream zigzag in colours taken from their icons. Try both and see what you like.
 
 If macOS asks for Accessibility access, enable Window Sweaters in **System Settings → Privacy & Security → Accessibility** so it can follow which window is focused.

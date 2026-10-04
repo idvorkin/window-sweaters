@@ -1,5 +1,6 @@
 #include "border.h"
 #include "misc/autoyarn.h"
+#include "misc/raccoon.h"
 #include "hashtable.h"
 #include "events.h"
 #include "reconcile.h"
@@ -165,6 +166,43 @@ void knit_apps_filter_changed(void) { windows_apply_app_filter(&g_windows); }
 // Owners of every window that could wear a sweater, for the Apps menu.
 int knit_window_owners(int* pids, int capacity) {
   return windows_eligible_owners(pids, capacity);
+}
+
+// The raccoon runs around the focused window, if it is wearing a sweater.
+bool knit_raccoon_target(uint32_t* wid, CGRect* bounds, float* band, uint32_t* yarn) {
+  if (!g_knit_on) return false;
+  for (int i = 0; i < g_windows.capacity; i++) {
+    for (struct bucket* b = g_windows.buckets[i]; b; b = b->next) {
+      struct border* border = b->value;
+      if (!border || !border->focused || !border->visible || border->is_proxy
+          || border_get_settings(border)->border_style != BORDER_STYLE_KNIT) continue;
+      *wid = border->target_wid;
+      // the rect its sweater wraps: inside the edge on a full-screen window
+      *bounds = CGRectInset(border->target_bounds, border->inset, border->inset);
+      *band = border_get_settings(border)->border_width;
+      *yarn = border->yarn;
+      return true;
+    }
+  }
+  return false;
+}
+
+// Focus is only learned from notifications; after a restart none may have
+// arrived yet, and the raccoon would find nobody to visit.
+void knit_raccoon_refocus(void) {
+  windows_determine_and_focus_active_window(&g_windows);
+}
+
+void knit_raccoon_bite(uint32_t wid, CGPoint centre, float radius) {
+  struct border* border = table_find(&g_windows, &wid);
+  if (border) border_bite(border, centre, radius);
+}
+
+void knit_raccoon_reknit(uint32_t wid) {
+  struct border* border = table_find(&g_windows, &wid);
+  if (!border) return;
+  border->needs_redraw = true;
+  border_update(border, true);
 }
 
 extern void knit_menubar_start(void);

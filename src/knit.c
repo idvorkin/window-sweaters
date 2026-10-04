@@ -18,6 +18,7 @@ int g_knit_anchor = KNIT_ANCHOR_CORNER;
 float g_knit_dim = 0.f;   // unfocused windows look identical by default
 bool g_knit_on = true;
 bool g_knit_focused_only = false;
+bool g_knit_fullscreen = false;
 int knit_tile_scale_override = 0;   // 0 = auto
 int knit_interp_override = -1;      // -1 = high
 int knit_mitre_off = 0;            // 1 = rectangular strips instead of mitred

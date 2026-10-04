@@ -72,8 +72,11 @@ static bool saved_on_by_default(void) {
 
 struct knit_gauge g_knit = {.rows = 6};
 int g_knit_stitch, g_knit_basket, g_knit_anchor;
-bool g_knit_on = true, g_knit_pattern_by_app = true, g_knit_focused_only;
+bool g_knit_on = true, g_knit_pattern_by_app = true, g_knit_focused_only, g_knit_fullscreen;
 const char* g_knit_stitch_names[] = {"stockinette", "rib", "garter"};
+bool g_raccoon_on, g_raccoon_follow;
+int g_raccoon_eats = RACCOON_EATS_LAP, raccoon_summons;
+const char* g_raccoon_eats_names[] = {"off", "lap", "nibble", "stay", "sometimes"};
 static const uint32_t basket[] = {0xff123456, 0xffabcdef};
 const struct knit_basket g_knit_baskets[] = {
   {"first", basket, 2}, {"second", basket, 2}, {"third", basket, 2}, {"fourth", basket, 2}
@@ -109,6 +112,15 @@ void knit_apply(const char* argument) {
   } else if (sscanf(argument, "width=%f", &current_width) == 1) {
   } else if (!strncmp(argument, "knit=", 5)) g_knit_on = !strcmp(argument + 5, "on");
   else if (!strncmp(argument, "focused_only=", 13)) g_knit_focused_only = !strcmp(argument + 13, "on");
+  else if (!strncmp(argument, "fullscreen=", 11)) g_knit_fullscreen = !strcmp(argument + 11, "on");
+  else if (!strcmp(argument, "raccoon=now")) raccoon_summons++;
+  else if (!strcmp(argument, "raccoon=away")) raccoon_summons--;
+  else if (!strncmp(argument, "raccoon=", 8)) g_raccoon_on = !strcmp(argument + 8, "on");
+  else if (!strncmp(argument, "raccoon_follow=", 15)) g_raccoon_follow = !strcmp(argument + 15, "on");
+  else if (!strncmp(argument, "raccoon_eats=", 13)) {
+    for (int i = 0; i < RACCOON_EATS_COUNT; i++)
+      if (!strcmp(argument + 13, g_raccoon_eats_names[i])) g_raccoon_eats = i;
+  }
 }
 
 static int add_chart(const char* name, int height) {
@@ -282,7 +294,7 @@ int main(void) {
     NSMenu* menu = [[NSMenu alloc] initWithTitle:@"Test"];
     menu.autoenablesItems = NO;
     [controller rebuild:menu];
-    NSArray* expected = @[@"Show Sweater Borders", @"Apps", @"Focused Window Only", @"Pattern", @"Border Width", @"Stitch Size",
+    NSArray* expected = @[@"Show Sweater Borders", @"Apps", @"Focused Window Only", @"Sweaters on Full-Screen Windows", @"Raccoon", @"Pattern", @"Border Width", @"Stitch Size",
                          @"", @"Quit Window Sweaters"];
     assert(menu.numberOfItems == expected.count);
     for (NSInteger i = 0; i < menu.numberOfItems; i++)
@@ -303,6 +315,65 @@ int main(void) {
     assert(!g_knit_focused_only && ![defaults boolForKey:@"focusedOnly"]);
     [controller rebuild:menu];
     assert([menu itemWithTitle:@"Focused Window Only"].state == NSControlStateValueOff);
+
+    // Full-screen sweaters: off by default, saved and restored.
+    NSString* fullscreen = @"Sweaters on Full-Screen Windows";
+    assert(!g_knit_fullscreen && [menu itemWithTitle:fullscreen].state == NSControlStateValueOff);
+    [controller apply:[menu itemWithTitle:fullscreen]];
+    assert(g_knit_fullscreen && [defaults boolForKey:@"fullscreen"]);
+    g_knit_fullscreen = false;
+    knit_load_prefs();
+    assert(g_knit_fullscreen);
+    [controller rebuild:menu];
+    assert([menu itemWithTitle:fullscreen].state == NSControlStateValueOn);
+    [controller apply:[menu itemWithTitle:fullscreen]];
+    assert(!g_knit_fullscreen && ![defaults boolForKey:@"fullscreen"]);
+    [controller rebuild:menu];
+
+    // Raccoon: off by default, eats a lap by default; both saved and restored.
+    NSMenu* raccoon = submenu(menu, @"Raccoon");
+    assert(!g_raccoon_on && [raccoon itemWithTitle:@"Visit Every Few Minutes"].state == NSControlStateValueOff);
+    assert([raccoon itemWithTitle:@"Eats a Lap, Then It's Re-knitted"].state == NSControlStateValueOn);
+    [controller apply:[raccoon itemWithTitle:@"Visit Every Few Minutes"]];
+    [controller apply:[raccoon itemWithTitle:@"Nibbles a Few Bites"]];
+    [controller apply:[raccoon itemWithTitle:@"Summon Now"]];
+    assert(g_raccoon_on && g_raccoon_eats == RACCOON_EATS_NIBBLE && raccoon_summons == 1);
+    [controller apply:[raccoon itemWithTitle:@"Shoo Away"]];
+    assert(g_raccoon_on && raccoon_summons == 0);
+    raccoon_summons = 1;
+    assert(!g_raccoon_follow);
+    [controller apply:[raccoon itemWithTitle:@"Follow Me Between Windows"]];
+    assert(g_raccoon_follow && [defaults boolForKey:@"raccoonFollow"]);
+    g_raccoon_follow = false;
+    knit_load_prefs();
+    assert(g_raccoon_follow);
+    [controller rebuild:menu];
+    raccoon = submenu(menu, @"Raccoon");
+    assert([raccoon itemWithTitle:@"Follow Me Between Windows"].state == NSControlStateValueOn);
+    [controller apply:[raccoon itemWithTitle:@"Follow Me Between Windows"]];
+    assert(!g_raccoon_follow && ![defaults boolForKey:@"raccoonFollow"]);
+    assert([defaults boolForKey:@"raccoon"] && [defaults integerForKey:@"raccoonEats"] == RACCOON_EATS_NIBBLE);
+    g_raccoon_on = false; g_raccoon_eats = RACCOON_EATS_OFF;
+    knit_load_prefs();
+    assert(g_raccoon_on && g_raccoon_eats == RACCOON_EATS_NIBBLE && raccoon_summons == 1);
+    [controller rebuild:menu];
+    raccoon = submenu(menu, @"Raccoon");
+    assert([raccoon itemWithTitle:@"Nibbles a Few Bites"].state == NSControlStateValueOn);
+    [controller apply:[raccoon itemWithTitle:@"Visit Every Few Minutes"]];
+    [controller apply:[raccoon itemWithTitle:@"Eats a Lap, Then It's Re-knitted"]];
+    assert(!g_raccoon_on && ![defaults boolForKey:@"raccoon"] && g_raccoon_eats == RACCOON_EATS_LAP);
+
+    // Its lap runs clockwise from the top-left corner and wraps.
+    int side;
+    CGRect lap = CGRectMake(10, 20, 100, 50);
+    CGPoint at = raccoon_point(lap, 30, &side);
+    assert(side == 0 && at.x == 40 && at.y == 20);
+    at = raccoon_point(lap, 110, &side);
+    assert(side == 1 && at.x == 110 && at.y == 30);
+    at = raccoon_point(lap, 160, &side);
+    assert(side == 2 && at.x == 100 && at.y == 70);
+    at = raccoon_point(lap, 300 + 260, &side);
+    assert(side == 3 && at.x == 10 && at.y == 60);
 
     NSMenu* patterns = submenu(menu, @"Pattern");
     assert(checked_count(patterns) == 1);

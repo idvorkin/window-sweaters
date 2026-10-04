@@ -67,6 +67,29 @@ static bool border_check_too_small(struct border* border, CGRect window_frame) {
   return false;
 }
 
+// The whole band of a window filling its display would be off that display.
+static float border_inset_for(CGRect window, struct settings* settings) {
+  if (!g_knit_fullscreen || settings->border_style != BORDER_STYLE_KNIT
+      || window.size.width < 4.f * settings->border_width
+      || window.size.height < 4.f * settings->border_width) return 0.f;
+  CGDirectDisplayID display;
+  uint32_t count = 0;
+  CGPoint centre = { CGRectGetMidX(window), CGRectGetMidY(window) };
+  if (CGGetDisplaysWithPoint(centre, 1, &display, &count) != kCGErrorSuccess || !count) return 0.f;
+  CGRect screen = CGDisplayBounds(display);
+  // The top has slack: a menu bar or a notch may sit above the window.
+  bool fills = CGRectGetMinY(window) <= CGRectGetMinY(screen) + 0.1f * screen.size.height
+            && CGRectGetMinX(window) <= CGRectGetMinX(screen) + 1.f
+            && CGRectGetMaxX(window) >= CGRectGetMaxX(screen) - 1.f
+            && CGRectGetMaxY(window) >= CGRectGetMaxY(screen) - 1.f;
+  return fills ? settings->border_width : 0.f;
+}
+
+// An inset sweater lies over the window, so it has to be stacked above it.
+static int border_order_for(struct border* border, struct settings* settings) {
+  return border->inset > 0.f ? BORDER_ORDER_ABOVE : settings->border_order;
+}
+
 static bool border_calculate_bounds(struct border* border, CGRect* frame, struct settings* settings,
                                     const CGRect* observed_bounds) {
   CGRect window_frame = CGRectZero;
@@ -90,6 +113,10 @@ static bool border_calculate_bounds(struct border* border, CGRect* frame, struct
     border_hide(border);
     return false;
   }
+
+  // From here on the "window" is the rect the sweater wraps.
+  border->inset = border_inset_for(window_frame, settings);
+  window_frame = CGRectInset(window_frame, border->inset, border->inset);
 
   float border_offset = - settings->border_width - BORDER_PADDING;
   *frame = CGRectInset(window_frame, border_offset, border_offset);
@@ -137,16 +164,17 @@ static void border_draw(struct border* border, CGRect frame, struct settings* se
       }
     }
     knit_polka_yarn(border->app, border->owner_pid, yarn, &chart);
+    border->yarn = yarn;
 
     knit_draw(border->context,
               border->drawing_bounds,
-              border->radius,
+              fmaxf(0.f, border->radius - border->inset),
               settings->border_width,
               yarn,
               chart,
               border->focused ? 0.f : g_knit_dim,
               // drawn above the window, a deep tuck would cover its content
-              settings->border_order == BORDER_ORDER_ABOVE ? 1.f : g_knit.tuck);
+              border_order_for(border, settings) == BORDER_ORDER_ABOVE ? 1.f : g_knit.tuck);
     CGContextFlush(border->context);
     CGContextRestoreGState(border->context);
     SLSFlushWindowContentRegion(border->cid, border->wid, NULL);
@@ -403,7 +431,7 @@ void border_update_internal(struct border* border, struct settings* settings, co
   SLSTransactionSetWindowSubLevel(transaction, border->wid, border->sub_level);
   SLSTransactionOrderWindow(transaction,
                             border->wid,
-                            settings->border_order,
+                            border_order_for(border, settings),
                             border->target_wid      );
   SLSTransactionCommit(transaction, 0);
   CFRelease(transaction);
@@ -466,8 +494,9 @@ void border_destroy(struct border* border) {
 bool border_suppress_live_resize(struct border* border, CGRect bounds) {
   assert(pthread_main_np());
   if (!g_knit_on || border->is_proxy || border->external_proxy_wid) return false;
+  CGSize dressed = CGRectInset(bounds, border->inset, border->inset).size;
   if (!border->resize_suppressed && (!border->visible
-      || CGSizeEqualToSize(bounds.size, border->drawing_bounds.size))) return false;
+      || CGSizeEqualToSize(dressed, border->drawing_bounds.size))) return false;
   bool held = CGEventSourceButtonState(kCGEventSourceStateCombinedSessionState, kCGMouseButtonLeft);
   CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
   if (!border->resize_suppressed || held
@@ -501,7 +530,9 @@ static void border_apply_geometry(struct border* border, CGRect window_frame) {
   if (!border->geometry_valid || !border->wid || !border->context
       || border->needs_redraw || border->too_small || border->metadata_dirty
       || !isfinite(window_frame.origin.x) || !isfinite(window_frame.origin.y)
-      || !CGSizeEqualToSize(window_frame.size, border->drawing_bounds.size)) {
+      || border_inset_for(window_frame, settings) != border->inset
+      || !CGSizeEqualToSize(CGRectInset(window_frame, border->inset, border->inset).size,
+                            border->drawing_bounds.size)) {
     border_update_internal(border, settings, &window_frame);
     pthread_mutex_unlock(&border->mutex);
     return;
@@ -512,10 +543,10 @@ static void border_apply_geometry(struct border* border, CGRect window_frame) {
     pthread_mutex_unlock(&border->mutex);
     return;
   }
-  CGPoint origin = { .x = window_frame.origin.x
+  CGPoint origin = { .x = window_frame.origin.x + border->inset
                           - settings->border_width
                           - BORDER_PADDING,
-                     .y = window_frame.origin.y
+                     .y = window_frame.origin.y + border->inset
                           - settings->border_width
                           - BORDER_PADDING          };
 
@@ -531,7 +562,7 @@ static void border_apply_geometry(struct border* border, CGRect window_frame) {
     // border's position and depth together.
     SLSTransactionOrderWindow(transaction,
                               border->wid,
-                              settings->border_order,
+                              border_order_for(border, settings),
                               border->target_wid     );
 
     SLSTransactionCommit(transaction, 0);
@@ -618,7 +649,7 @@ void border_reorder(struct border* border) {
   if (transaction) {
     SLSTransactionSetWindowLevel(transaction, border->wid, level);
     SLSTransactionSetWindowSubLevel(transaction, border->wid, sub_level);
-    SLSTransactionOrderWindow(transaction, border->wid, settings->border_order,
+    SLSTransactionOrderWindow(transaction, border->wid, border_order_for(border, settings),
                              border->target_wid);
     SLSTransactionCommit(transaction, 0);
     // Match the existing transaction paths: the private commit return is not
@@ -648,6 +679,24 @@ void border_hide(struct border* border) {
   pthread_mutex_unlock(&border->mutex);
 }
 
+void border_bite(struct border* border, CGPoint centre, float radius) {
+  pthread_mutex_lock(&border->mutex);
+  if (border->wid && border->context && border->visible) {
+    // The context's y grows upward from the bottom of the border window.
+    CGRect hole = { { centre.x - border->origin.x - radius,
+                      border->frame.size.height - (centre.y - border->origin.y) - radius },
+                    { 2.f * radius, 2.f * radius } };
+    CGContextSaveGState(border->context);
+    CGContextAddEllipseInRect(border->context, hole);
+    CGContextClip(border->context);
+    CGContextClearRect(border->context, hole);
+    CGContextRestoreGState(border->context);
+    CGContextFlush(border->context);
+    SLSFlushWindowContentRegion(border->cid, border->wid, NULL);
+  }
+  pthread_mutex_unlock(&border->mutex);
+}
+
 void border_unhide(struct border* border) {
   pthread_mutex_lock(&border->mutex);
   if (border->resize_suppressed || border->native_transform || border->too_small
@@ -663,7 +712,7 @@ void border_unhide(struct border* border) {
     if (transaction) {
       SLSTransactionOrderWindow(transaction,
                                 border->wid,
-                                settings->border_order,
+                                border_order_for(border, settings),
                                 border->target_wid      );
       SLSTransactionCommit(transaction, 0);
       CFRelease(transaction);

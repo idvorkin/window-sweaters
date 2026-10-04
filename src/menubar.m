@@ -10,6 +10,7 @@
 #include "misc/chart.h"
 #include "misc/apps.h"
 #include "misc/status_icon.h"
+#include "misc/raccoon.h"
 #include <stdio.h>
 
 extern void knit_apply(const char* arg);   // main.c: feeds one "key=value"
@@ -169,6 +170,10 @@ static void knit_save_prefs(void) {
   NSUserDefaults* d = NSUserDefaults.standardUserDefaults;
   [d setBool:g_knit_on forKey:@"on"];
   [d setBool:g_knit_focused_only forKey:@"focusedOnly"];
+  [d setBool:g_knit_fullscreen forKey:@"fullscreen"];
+  [d setBool:g_raccoon_on forKey:@"raccoon"];
+  [d setInteger:g_raccoon_eats forKey:@"raccoonEats"];
+  [d setBool:g_raccoon_follow forKey:@"raccoonFollow"];
   [d setInteger:g_knit_stitch forKey:@"yarn"];
   [d setInteger:g_knit_basket forKey:@"basket"];
   [d setFloat:knit_current_width() forKey:@"width"];
@@ -189,7 +194,7 @@ static void knit_load_prefs(void) {
   NSUserDefaults* d = NSUserDefaults.standardUserDefaults;
   // Older versions saved a global chart even while app profiles overrode it.
   // A missing mode therefore migrates to By App, preserving those sweaters.
-  [d registerDefaults:@{ @"on": @YES, @"focusedOnly": @NO, @"yarn": @0, @"basket": @3, @"width": @12.0f, @"gauge": @6.0f, @"chart": @"none", @"patternByApp": @YES, @"anchor": @0, @"appsOnByDefault": @YES, @"appExceptions": @[] }];
+  [d registerDefaults:@{ @"on": @YES, @"focusedOnly": @NO, @"fullscreen": @NO, @"raccoon": @NO, @"raccoonFollow": @NO, @"raccoonEats": @(RACCOON_EATS_LAP), @"yarn": @0, @"basket": @3, @"width": @12.0f, @"gauge": @6.0f, @"chart": @"none", @"patternByApp": @YES, @"anchor": @0, @"appsOnByDefault": @YES, @"appExceptions": @[] }];
   char buf[128];
 
   NSInteger y = [d integerForKey:@"yarn"];
@@ -226,6 +231,13 @@ static void knit_load_prefs(void) {
 
   knit_apply([d boolForKey:@"on"] ? "knit=on" : "knit=off");
   knit_apply([d boolForKey:@"focusedOnly"] ? "focused_only=on" : "focused_only=off");
+  knit_apply([d boolForKey:@"fullscreen"] ? "fullscreen=on" : "fullscreen=off");
+  NSInteger eats = [d integerForKey:@"raccoonEats"];
+  if (eats < 0 || eats >= RACCOON_EATS_COUNT) eats = RACCOON_EATS_LAP;
+  snprintf(buf, sizeof buf, "raccoon_eats=%s", g_raccoon_eats_names[eats]);
+  knit_apply(buf);
+  knit_apply([d boolForKey:@"raccoonFollow"] ? "raccoon_follow=on" : "raccoon_follow=off");
+  knit_apply([d boolForKey:@"raccoon"] ? "raccoon=on" : "raccoon=off");
 
   // Restored before any window is discovered, so a switched-off app never
   // flashes a sweater at launch. Anything malformed is skipped, not trusted.
@@ -521,6 +533,28 @@ static void knit_load_prefs(void) {
   NSMenuItem* focusedOnly = [menu itemAtIndex:menu.numberOfItems - 1];
   focusedOnly.state = g_knit_focused_only ? NSControlStateValueOn : NSControlStateValueOff;
   focusedOnly.toolTip = @"Only the window you're using wears a sweater.";
+  [self add:menu title:@"Sweaters on Full-Screen Windows"
+        arg:(g_knit_fullscreen ? @"fullscreen=off" : @"fullscreen=on") on:g_knit_fullscreen]
+    .toolTip = @"A window that fills the screen is knitted just inside its edge, over its content.";
+
+  NSMenu* raccoon = [self submenu:menu title:@"Raccoon"];
+  [self add:raccoon title:@"Visit Every Few Minutes"
+        arg:(g_raccoon_on ? @"raccoon=off" : @"raccoon=on") on:g_raccoon_on]
+    .toolTip = @"A little raccoon runs around the window you're using.";
+  [self add:raccoon title:@"Follow Me Between Windows"
+        arg:(g_raccoon_follow ? @"raccoon_follow=off" : @"raccoon_follow=on") on:g_raccoon_follow]
+    .toolTip = @"Mid-lap, it hops to whichever window you switch to.";
+  [self add:raccoon title:@"Summon Now" arg:@"raccoon=now" on:NO];
+  [self add:raccoon title:@"Shoo Away" arg:@"raccoon=away" on:NO];
+  [raccoon addItem:[NSMenuItem separatorItem]];
+  NSArray* appetites = @[@"Just Runs By", @"Eats a Lap, Then It's Re-knitted",
+                         @"Nibbles a Few Bites", @"Eats It and Leaves It Bare",
+                         @"Sometimes Eats"];
+  for (int i = 0; i < RACCOON_EATS_COUNT; i++) {
+    [self add:raccoon title:appetites[i]
+          arg:[NSString stringWithFormat:@"raccoon_eats=%s", g_raccoon_eats_names[i]]
+           on:g_raccoon_eats == i];
+  }
 
   NSMenu* pattern = [self submenu:menu title:@"Pattern"];
   NSMenuItem* byApp = [self add:pattern title:@"By App" arg:@"chart=by-app"

@@ -102,6 +102,10 @@ struct border {
 
   float radius;
   float inner_radius;
+  // How far inside the window's edge the sweater is knitted: the band width
+  // on a window that fills its display (see g_knit_fullscreen), otherwise 0.
+  float inset;
+  uint32_t yarn;   // the base colour it was last knitted in (ARGB)
 
   CGPoint origin;
   CGRect frame;
@@ -133,6 +137,9 @@ void border_update_geometry_from_snapshot(struct border* border, CGRect bounds, 
 void border_update(struct border* border, bool try_async);
 void border_reorder(struct border* border);
 void border_hide(struct border* border);
+// Clear a round bite out of the drawn sweater, in screen coordinates. Nothing
+// is remembered: the next redraw knits it back.
+void border_bite(struct border* border, CGPoint centre, float radius);
 void border_unhide(struct border* border);
 
 struct settings* border_get_settings(struct border* border);

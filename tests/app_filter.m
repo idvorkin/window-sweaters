@@ -125,6 +125,7 @@ pid_t g_pid = 1;
 int g_knit_trace;
 float g_knit_dim;
 bool g_knit_focused_only;
+bool g_knit_fullscreen;
 CFArrayRef (*JBSLSWindowIteratorGetCornerRadii)(CFTypeRef);
 static int created, destroyed;
 

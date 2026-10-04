@@ -1,6 +1,6 @@
 CFILES = src/main.c src/parse.c src/mach.c src/hashtable.c src/events.c src/reconcile.c \
          src/windows.c src/border.c src/animation.c src/knit.c src/chart.c src/apps.c
-LIBS = -framework AppKit -framework Cocoa -framework CoreVideo -framework UniformTypeIdentifiers \
+LIBS = -framework AppKit -framework Cocoa -framework CoreVideo -framework UniformTypeIdentifiers -framework QuartzCore \
        -F/System/Library/PrivateFrameworks/ -framework SkyLight
 
 # Released builds are universal so Intel Macs can run the download. Local
@@ -16,13 +16,15 @@ all: | bin
 	clang $(ARCHS) $(DEPLOY) -O3 -g -Isrc -fobjc-arc -c src/menubar.m -o bin/menubar.o
 	clang $(ARCHS) $(DEPLOY) -O3 -g -Isrc -fobjc-arc -c src/autoyarn.m -o bin/autoyarn.o
 	clang $(ARCHS) $(DEPLOY) -O3 -g -Isrc -fobjc-arc -c src/hidden.m -o bin/hidden.o
-	clang $(ARCHS) $(DEPLOY) -std=c99 -O3 -g -Isrc $(CFILES) bin/menubar.o bin/autoyarn.o bin/hidden.o -o bin/borders $(LIBS)
+	clang $(ARCHS) $(DEPLOY) -O3 -g -Isrc -fobjc-arc -c src/raccoon.m -o bin/raccoon.o
+	clang $(ARCHS) $(DEPLOY) -std=c99 -O3 -g -Isrc $(CFILES) bin/menubar.o bin/autoyarn.o bin/hidden.o bin/raccoon.o -o bin/borders $(LIBS)
 
 debug: | bin
 	clang -O0 -g -Isrc -fobjc-arc -c src/menubar.m -o bin/menubar.o
 	clang -O0 -g -Isrc -fobjc-arc -c src/autoyarn.m -o bin/autoyarn.o
 	clang -O0 -g -Isrc -fobjc-arc -c src/hidden.m -o bin/hidden.o
-	clang -std=c99 -O0 -g -DDEBUG -Isrc $(CFILES) bin/menubar.o bin/autoyarn.o bin/hidden.o -o bin/debug $(LIBS)
+	clang -O0 -g -Isrc -fobjc-arc -c src/raccoon.m -o bin/raccoon.o
+	clang -std=c99 -O0 -g -DDEBUG -Isrc $(CFILES) bin/menubar.o bin/autoyarn.o bin/hidden.o bin/raccoon.o -o bin/debug $(LIBS)
 
 bin:
 	mkdir bin

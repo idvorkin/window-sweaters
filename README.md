@@ -32,6 +32,10 @@ To leave an app bare, open **Apps** and untick it. Its windows lose their sweate
 
 Want just one sweater at a time? Tick **Focused Window Only** and only the window you're using wears one; the rest stay bare until you click into them. In a startup script it's `focused_only=on`.
 
+A window that fills the screen has no room around it, so its sweater is normally out of sight. Tick **Sweaters on Full-Screen Windows** (`fullscreen=on`) and it's knitted just inside the window's edge instead. It sits over the window's content, covering a border's width along each edge.
+
+Fancy a visitor? Open **Raccoon** and tick **Visit Every Few Minutes**: every two to five minutes a little raccoon runs a lap around the window you're using, and, depending on the appetite you pick, eats the sweater as it goes. By default it's knitted back when the raccoon leaves. **Summon Now** calls it straight away and **Shoo Away** (`raccoon=away`) sends it off mid-lap. In a startup script it's `raccoon=on`, `raccoon=now` and `raccoon_eats=off|lap|nibble|stay|sometimes`. Tick **Follow Me Between Windows** (`raccoon_follow=on`) and it hops to whichever window you switch to mid-lap, instead of leaving.
+
 **By App** gives each app its own sweater. **Zigzag** gives them all a softer, matching cream zigzag in colours taken from their icons. Try both and see what you like.
 
 If macOS asks for Accessibility access, enable Window Sweaters in **System Settings → Privacy & Security → Accessibility** so it can follow which window is focused.

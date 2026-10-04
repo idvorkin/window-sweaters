@@ -19,6 +19,8 @@ mkdir -p "$STAGED/Resources" "$STAGE/AppIcon.iconset"
 clang -O2 -fobjc-arc -I"$ROOT/src" "$ROOT/scripts/build-icon.m" -framework Cocoa -o "$STAGE/build-icon"
 "$STAGE/build-icon" "$STAGE/AppIcon.iconset"
 iconutil -c icns "$STAGE/AppIcon.iconset" -o "$STAGED/Resources/AppIcon.icns"
+# Optional raccoon sprite strip; without it the app draws the emoji.
+[[ -f "$ROOT/assets/raccoon.png" ]] && cp -f "$ROOT/assets/raccoon.png" "$STAGED/Resources/raccoon.png"
 chmod +x "$STAGED/MacOS/WindowSweaters"
 
 xattr -cr "$STAGE/Window Sweaters.app"

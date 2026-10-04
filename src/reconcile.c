@@ -217,7 +217,9 @@ void windows_reconcile_snapshot(struct table* windows, CFArrayRef snapshot) {
                  || !border->geometry_valid || border->needs_redraw || border->metadata_dirty) {
         border_update_geometry_from_snapshot(border, geometry, source->alpha);
       } else {
-        int order = border_get_settings(border)->border_order;
+        // An inset sweater is stacked above its window whatever the setting says.
+        int order = border->inset > 0.f ? BORDER_ORDER_ABOVE
+                                        : border_get_settings(border)->border_order;
         bool placed = order == BORDER_ORDER_BELOW
           ? overlay->rank > source->rank && overlay->rank < source->next_foreign
           : overlay->rank < source->rank && overlay->rank > source->previous_foreign;

@@ -42,6 +42,7 @@ struct knit_gauge g_knit;
 bool g_knit_on = false;
 float g_knit_dim;
 bool g_knit_focused_only;
+bool g_knit_fullscreen;
 int g_chart_active;
 mach_port_t g_server_port;
 static int draws;

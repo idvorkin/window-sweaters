@@ -2,6 +2,7 @@
 #include "misc/knit.h"
 #include "misc/chart.h"
 #include "misc/apps.h"
+#include "misc/raccoon.h"
 #include "border.h"
 #include "hashtable.h"
 
@@ -198,9 +199,38 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       g_knit_focused_only = true;
       update_mask |= BORDER_UPDATE_MASK_ALL;
     }
+    else if (strcmp(arguments[i], "fullscreen=on") == 0
+             || strcmp(arguments[i], "fullscreen=off") == 0) {
+      g_knit_fullscreen = arguments[i][12] == 'n';
+      update_mask |= BORDER_UPDATE_MASK_ALL;
+    }
     else if (strcmp(arguments[i], "focused_only=off") == 0) {
       g_knit_focused_only = false;
       update_mask |= BORDER_UPDATE_MASK_ALL;
+    }
+    else if (strcmp(arguments[i], "raccoon=on") == 0
+             || strcmp(arguments[i], "raccoon=off") == 0) {
+      raccoon_set_on(arguments[i][9] == 'n');
+      update_mask |= BORDER_UPDATE_MASK_SETTING;
+    }
+    else if (strcmp(arguments[i], "raccoon_follow=on") == 0
+             || strcmp(arguments[i], "raccoon_follow=off") == 0) {
+      g_raccoon_follow = arguments[i][16] == 'n';
+      update_mask |= BORDER_UPDATE_MASK_SETTING;
+    }
+    else if (strcmp(arguments[i], "raccoon=away") == 0) {
+      raccoon_shoo();
+      update_mask |= BORDER_UPDATE_MASK_SETTING;
+    }
+    else if (strcmp(arguments[i], "raccoon=now") == 0) {
+      raccoon_summon();
+      update_mask |= BORDER_UPDATE_MASK_SETTING;
+    }
+    else if (strncmp(arguments[i], "raccoon_eats=", 13) == 0) {
+      for (int k = 0; k < RACCOON_EATS_COUNT; k++) {
+        if (strcmp(arguments[i] + 13, g_raccoon_eats_names[k]) == 0) g_raccoon_eats = k;
+      }
+      update_mask |= BORDER_UPDATE_MASK_SETTING;
     }
     else if (strncmp(arguments[i], "yarn=", 5) == 0) {
       for (int k = 0; k < KNIT_STITCH_COUNT; k++) {

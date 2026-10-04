@@ -93,5 +93,9 @@ extern float g_knit_dim;
 /// Only the focused window wears its sweater; the rest are left bare.
 extern bool g_knit_focused_only;
 
+/// A window that fills its display has no room outside it for a sweater. With
+/// this on it is knitted just inside the window's edge instead, over the content.
+extern bool g_knit_fullscreen;
+
 /// Discard every cached tile. Call after changing the gauge, stitch or basket.
 void knit_flush_cache(void);

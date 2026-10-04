@@ -3,6 +3,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/QuartzCore.h>
+#import <os/log.h>
 #include "misc/raccoon.h"
 
 bool g_raccoon_on = false;
@@ -194,8 +195,26 @@ static CGPoint raccoon_onto_band(CGRect track, CGRect band, CGPoint p) {
   if (_wid) return;   // already out
   uint32_t wid; CGRect bounds; float band;
   if (!knit_raccoon_target(&wid, &bounds, &band, &_yarn)) knit_raccoon_refocus();
-  if (!knit_raccoon_target(&wid, &bounds, &band, &_yarn)
-      || CGRectIsNull(raccoon_keep_onscreen(bounds))) { [self scheduleNext]; return; }
+  bool found = knit_raccoon_target(&wid, &bounds, &band, &_yarn);
+  if (!found) {
+    // Focus tracking can lose the thread (no Accessibility permission, a
+    // Space of its own). The frontmost window on screen wearing a sweater is
+    // the one being looked at.
+    NSArray* onscreen = CFBridgingRelease(CGWindowListCopyWindowInfo(
+        kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements, kCGNullWindowID));
+    for (NSDictionary* info in onscreen) {
+      if ([info[(id)kCGWindowLayer] intValue] != 0) continue;
+      wid = [info[(id)kCGWindowNumber] unsignedIntValue];
+      if ((found = knit_raccoon_window(wid, &bounds, &band, &_yarn))) break;
+    }
+  }
+  if (!found || CGRectIsNull(raccoon_keep_onscreen(bounds))) {
+    char why[320];
+    knit_raccoon_describe(why, sizeof why);
+    os_log(OS_LOG_DEFAULT, "raccoon: no focused window wearing a sweater on a display; no visit. %{public}s", why);
+    [self scheduleNext];
+    return;
+  }
   if (!self.frames) [self loadFrames];
   if (!self.frames.count) return;
   if (!self.window) [self makeWindow];
@@ -234,7 +253,9 @@ static CGPoint raccoon_onto_band(CGRect track, CGRect band, CGPoint p) {
   else if (_eatenWid == _wid) _eatenWid = 0;
 }
 
-- (void)leave {
+// Every visit ends here, and says why in the log.
+- (void)leave:(const char*)why {
+  os_log(OS_LOG_DEFAULT, "raccoon: left after %{public}.0f points: %{public}s", _dist, why);
   [self.tick invalidate];
   self.tick = nil;
   [self.window orderOut:nil];
@@ -255,15 +276,20 @@ static CGPoint raccoon_onto_band(CGRect track, CGRect band, CGPoint p) {
 }
 
 - (void)shoo {
-  if (_wid) [self leave];
+  if (_wid) [self leave:"shooed away"];
 }
 
 - (void)step {
   uint32_t wid; CGRect bounds; float band;
-  // The window closed, its sweater is hidden for a resize, or focus moved.
-  if (!knit_raccoon_target(&wid, &bounds, &band, &_yarn)) { [self leave]; return; }
-  if (wid != _wid) {
-    if (!g_raccoon_follow) { [self leave]; return; }
+  // Focus moved to another sweater: follow it or leave. Otherwise stay with
+  // this window for as long as its sweater shows, whatever focus tracking says.
+  bool elsewhere = knit_raccoon_target(&wid, &bounds, &band, &_yarn) && wid != _wid;
+  if (!elsewhere && !knit_raccoon_window(_wid, &bounds, &band, &_yarn)) {
+    [self leave:"its window closed or its sweater is hidden"];
+    return;
+  }
+  if (elsewhere) {
+    if (!g_raccoon_follow) { [self leave:"focus moved to another window"]; return; }
     // Start a lap of the newly focused window from where it stands. The old
     // window's distance means nothing on a perimeter of a different length.
     [self settle];
@@ -297,10 +323,10 @@ static CGPoint raccoon_onto_band(CGRect track, CGRect band, CGPoint p) {
 
   CGRect band_middle = CGRectInset(bounds, -band * 0.5f, -band * 0.5f);
   CGRect track = raccoon_keep_onscreen(band_middle);
-  if (CGRectIsNull(track)) { [self leave]; return; }
+  if (CGRectIsNull(track)) { [self leave:"its window is on no display"]; return; }
   float lap = 2.f * (float)(track.size.width + track.size.height);
   float end = _fleeEnd > 0.f ? fminf(_fleeEnd, lap) : lap;
-  if (_dist >= end) { [self leave]; return; }
+  if (_dist >= end) { [self leave:_fleeEnd > 0.f ? "the pointer startled it" : "lap finished"]; return; }
 
   int side;
   CGPoint p = raccoon_point(track, _start + _dist, &side);
@@ -477,6 +503,14 @@ static KnitRaccoon* raccoon(void) {
 void raccoon_set_on(bool on) {
   g_raccoon_on = on;
   [raccoon() scheduleNext];
+}
+
+void raccoon_why(void) {
+  dispatch_async(dispatch_get_main_queue(), ^{
+    char why[320];
+    knit_raccoon_describe(why, sizeof why);
+    os_log(OS_LOG_DEFAULT, "raccoon: %{public}s", why);
+  });
 }
 
 void raccoon_shoo(void) {

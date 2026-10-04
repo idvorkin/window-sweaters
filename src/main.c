@@ -168,19 +168,25 @@ int knit_window_owners(int* pids, int capacity) {
   return windows_eligible_owners(pids, capacity);
 }
 
+bool knit_raccoon_window(uint32_t wid, CGRect* bounds, float* band, uint32_t* yarn) {
+  struct border* border = g_knit_on ? table_find(&g_windows, &wid) : NULL;
+  if (!border || !border->visible || border->is_proxy
+      || border_get_settings(border)->border_style != BORDER_STYLE_KNIT) return false;
+  // the rect its sweater wraps: inside the edge on a full-screen window
+  *bounds = CGRectInset(border->target_bounds, border->inset, border->inset);
+  *band = border_get_settings(border)->border_width;
+  *yarn = border->yarn;
+  return true;
+}
+
 // The raccoon runs around the focused window, if it is wearing a sweater.
 bool knit_raccoon_target(uint32_t* wid, CGRect* bounds, float* band, uint32_t* yarn) {
-  if (!g_knit_on) return false;
   for (int i = 0; i < g_windows.capacity; i++) {
     for (struct bucket* b = g_windows.buckets[i]; b; b = b->next) {
       struct border* border = b->value;
-      if (!border || !border->focused || !border->visible || border->is_proxy
-          || border_get_settings(border)->border_style != BORDER_STYLE_KNIT) continue;
+      if (!border || !border->focused
+          || !knit_raccoon_window(border->target_wid, bounds, band, yarn)) continue;
       *wid = border->target_wid;
-      // the rect its sweater wraps: inside the edge on a full-screen window
-      *bounds = CGRectInset(border->target_bounds, border->inset, border->inset);
-      *band = border_get_settings(border)->border_width;
-      *yarn = border->yarn;
       return true;
     }
   }
@@ -191,6 +197,27 @@ bool knit_raccoon_target(uint32_t* wid, CGRect* bounds, float* band, uint32_t* y
 // arrived yet, and the raccoon would find nobody to visit.
 void knit_raccoon_refocus(void) {
   windows_determine_and_focus_active_window(&g_windows);
+}
+
+void knit_raccoon_describe(char* out, size_t size) {
+  int cid = SLSMainConnectionID();
+  int borders = 0, visible = 0, focused = 0, focused_visible = 0;
+  uint32_t focused_wid = 0;
+  for (int i = 0; i < g_windows.capacity; i++) {
+    for (struct bucket* b = g_windows.buckets[i]; b; b = b->next) {
+      struct border* border = b->value;
+      if (!border) continue;
+      borders++;
+      if (border->visible) visible++;
+      if (border->focused) { focused++; focused_wid = border->target_wid; focused_visible = border->visible; }
+    }
+  }
+  uint32_t ax_front = ax_get_front_window(cid), server_front = get_front_window(cid);
+  bool tracked = ax_front && table_find(&g_windows, &ax_front);
+  snprintf(out, size, "knit=%d ax_trusted=%d ax_front=%u (tracked=%d) server_front=%u borders=%d"
+           " visible=%d focused=%d focused_wid=%u focused_visible=%d",
+           g_knit_on, ax_check_trust(true), ax_front, tracked, server_front, borders, visible,
+           focused, focused_wid, focused_visible);
 }
 
 void knit_raccoon_bite(uint32_t wid, CGPoint centre, float radius) {

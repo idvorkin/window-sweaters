@@ -218,6 +218,10 @@ uint32_t parse_settings(struct settings* settings, int count, char** arguments) 
       g_raccoon_follow = arguments[i][16] == 'n';
       update_mask |= BORDER_UPDATE_MASK_SETTING;
     }
+    else if (strcmp(arguments[i], "raccoon=why") == 0) {
+      raccoon_why();
+      update_mask |= BORDER_UPDATE_MASK_SETTING;
+    }
     else if (strcmp(arguments[i], "raccoon=away") == 0) {
       raccoon_shoo();
       update_mask |= BORDER_UPDATE_MASK_SETTING;

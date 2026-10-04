@@ -28,13 +28,18 @@ extern const char* g_raccoon_eats_names[];
 
 void raccoon_set_on(bool on);
 void raccoon_summon(void);       // one visit now, whether or not visits are on
+void raccoon_why(void);          // log what a summon would find right now
 void raccoon_shoo(void);         // end the visit under way, mending as it would have
 
 // Provided by main.c. The raccoon holds a window id, never a border pointer:
 // the window may close mid-lap.
 // `yarn` is the sweater's base colour (ARGB), for the crumbs.
 bool knit_raccoon_target(uint32_t* wid, CGRect* bounds, float* band, uint32_t* yarn);
+// The same for one window by id, focused or not: false once it has no sweater showing.
+bool knit_raccoon_window(uint32_t wid, CGRect* bounds, float* band, uint32_t* yarn);
 void knit_raccoon_refocus(void);   // re-read which window is frontmost
+// What the app believes about focus, for the log line of a summon that found nobody.
+void knit_raccoon_describe(char* out, size_t size);
 void knit_raccoon_bite(uint32_t wid, CGPoint centre, float radius);
 void knit_raccoon_reknit(uint32_t wid);
 
